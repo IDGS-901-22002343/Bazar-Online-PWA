@@ -14,14 +14,19 @@ router.post('/addSale', (req, res) => {
     }
     
     const sql = `INSERT INTO sales (product_id, product_title, quantity, total_price) VALUES (?, ?, ?, ?)`;
-    const stmt = db.prepare(sql);
-    const result = stmt.run(product_id, product_title, quantity, total_price);
     
-    console.log(`💰 Venta registrada: ${product_title} - $${total_price}`);
-    
-    res.json({ 
-      success: true, 
-      sale_id: result.lastInsertRowid 
+    db.run(sql, [product_id, product_title, quantity, total_price], function(err) {
+      if (err) {
+        console.error('❌ Error registrando venta:', err);
+        return res.json({ success: false, error: err.message });
+      }
+      
+      console.log(`💰 Venta registrada: ${product_title} - $${total_price}`);
+      
+      res.json({ 
+        success: true, 
+        sale_id: this.lastID 
+      });
     });
     
   } catch (error) {
@@ -34,8 +39,15 @@ router.get('/sales', (req, res) => {
   try {
     const db = req.db;
     const sql = `SELECT * FROM sales ORDER BY sale_date DESC LIMIT 50`;
-    const rows = db.prepare(sql).all();
-    res.json(rows);
+    
+    db.all(sql, [], (err, rows) => {
+      if (err) {
+        console.error('❌ Error obteniendo ventas:', err);
+        return res.status(500).json({ error: 'Error interno' });
+      }
+      
+      res.json(rows);
+    });
   } catch (error) {
     console.error('❌ Error obteniendo ventas:', error);
     res.status(500).json({ error: 'Error interno' });

@@ -9,11 +9,18 @@ router.get('/', (req, res) => {
     console.log(`🔍 Búsqueda: "${searchQuery}"`);
     
     if (!searchQuery.trim()) {
-      const products = db.prepare('SELECT * FROM products LIMIT 50').all();
-      return res.json({ 
-        items: products.map(formatProduct),
-        total: products.length 
+      db.all('SELECT * FROM products LIMIT 50', [], (err, products) => {
+        if (err) {
+          console.error('❌ Error obteniendo productos:', err);
+          return res.status(500).json({ error: 'Error interno' });
+        }
+        
+        res.json({ 
+          items: products.map(formatProduct),
+          total: products.length 
+        });
       });
+      return;
     }
     
     const sql = `SELECT * FROM products 
@@ -21,21 +28,23 @@ router.get('/', (req, res) => {
                 LIMIT 50`;
     const searchPattern = `%${searchQuery}%`;
     
-    const rows = db.prepare(sql).all(searchPattern, searchPattern, searchPattern, searchPattern);
-    
-    console.log(`✅ Encontrados ${rows.length} productos para "${searchQuery}"`);
-    
-    res.json({
-      items: rows.map(formatProduct),
-      total: rows.length
+    db.all(sql, [searchPattern, searchPattern, searchPattern, searchPattern], (err, rows) => {
+      if (err) {
+        console.error('❌ Error en búsqueda:', err);
+        return res.status(500).json({ error: 'Error interno' });
+      }
+      
+      console.log(`✅ Encontrados ${rows.length} productos para "${searchQuery}"`);
+      
+      res.json({
+        items: rows.map(formatProduct),
+        total: rows.length
+      });
     });
     
   } catch (error) {
     console.error('❌ Error en búsqueda:', error);
-    res.status(500).json({ 
-      error: 'Error interno del servidor',
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -44,13 +53,18 @@ router.get('/:id', (req, res) => {
     const productId = parseInt(req.params.id);
     const db = req.db;
     
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
-    
-    if (!product) {
-      return res.status(404).json({ error: 'Producto no encontrado' });
-    }
-    
-    res.json(formatProduct(product));
+    db.get('SELECT * FROM products WHERE id = ?', [productId], (err, product) => {
+      if (err) {
+        console.error('❌ Error obteniendo producto:', err);
+        return res.status(500).json({ error: 'Error interno' });
+      }
+      
+      if (!product) {
+        return res.status(404).json({ error: 'Producto no encontrado' });
+      }
+      
+      res.json(formatProduct(product));
+    });
     
   } catch (error) {
     console.error('❌ Error obteniendo producto:', error);

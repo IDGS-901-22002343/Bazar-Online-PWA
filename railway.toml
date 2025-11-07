@@ -1,11 +1,7 @@
 [build]
 builder = "nixpacks"
 builderSettings = { nodeVersion = "18.x" }
-buildCommand = "cd frontend && npm install && npm run build && cd ../backend && npm install --build-from-source"
+buildCommand = "cd frontend && npm install && npm run build"
 
 [deploy]
-startCommand = "cd backend && npm start"
-
-[build.environment]
-PYTHON_VERSION = "3.11"
-NODE_ENV = "production"
+startCommand = "cd backend && npm install --omit=dev && npm start"
