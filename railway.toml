@@ -1,6 +1,11 @@
 [build]
 builder = "nixpacks"
-builderSettings = { nodeVersion = "22.12.0" }
+builderSettings = { nodeVersion = "18.x" }
+buildCommand = "cd frontend && npm install --omit=dev && npm run build"
 
 [deploy]
-startCommand = "cd backend && npm start"
+startCommand = "cd backend && npm install --omit=dev && npm start"
+
+[[services]]
+name = "web"
+sourcePath = "backend"
