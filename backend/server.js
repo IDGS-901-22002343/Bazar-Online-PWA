@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const Database = require('better-sqlite3');
 const itemsRoutes = require('./routes/items');
 const salesRoutes = require('./routes/sales');
 const path = require('path');
@@ -17,151 +18,232 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Datos de productos en memoria (funciona en producción)
-const products = [
-  {
-    id: 1,
-    title: "Laptop Gamer",
-    price: 1299.99,
-    description: "Laptop para gaming de alta gama",
-    category: "electronica",
-    image: "https://via.placeholder.com/150",
-    rating: { rate: 4.5, count: 120 },
-    brand: "TechBrand",
-    stock: 15,
-    discountPercentage: 10,
-    tags: ["gaming", "laptop", "performance"],
-    sku: "LTG001",
-    weight: 2.5,
-    dimensions: { width: 35, height: 25, depth: 2 },
-    warrantyInformation: "2 años",
-    shippingInformation: "Envío gratis",
-    availabilityStatus: "in_stock",
-    reviews: [],
-    returnPolicy: "30 días",
-    minimumOrderQuantity: 1,
-    meta: {},
-    thumbnail: "https://via.placeholder.com/50"
-  },
-  {
-    id: 2,
-    title: "Smartphone Pro",
-    price: 599.99,
-    description: "Teléfono inteligente última generación",
-    category: "electronica",
-    image: "https://via.placeholder.com/150",
-    rating: { rate: 4.3, count: 89 },
-    brand: "PhoneTech",
-    stock: 25,
-    discountPercentage: 5,
-    tags: ["smartphone", "mobile", "tech"],
-    sku: "SPP002",
-    weight: 0.2,
-    dimensions: { width: 7, height: 15, depth: 0.8 },
-    warrantyInformation: "1 año",
-    shippingInformation: "Envío express",
-    availabilityStatus: "in_stock",
-    reviews: [],
-    returnPolicy: "30 días",
-    minimumOrderQuantity: 1,
-    meta: {},
-    thumbnail: "https://via.placeholder.com/50"
-  },
-  {
-    id: 3,
-    title: "Auriculares Bluetooth",
-    price: 89.99,
-    description: "Auriculares inalámbricos con cancelación de ruido",
-    category: "electronica",
-    image: "https://via.placeholder.com/150",
-    rating: { rate: 4.2, count: 67 },
-    brand: "AudioPro",
-    stock: 30,
-    discountPercentage: 15,
-    tags: ["audio", "inalámbrico", "música"],
-    sku: "AUB003",
-    weight: 0.3,
-    dimensions: { width: 18, height: 16, depth: 7 },
-    warrantyInformation: "1 año",
-    shippingInformation: "Envío estándar",
-    availabilityStatus: "in_stock",
-    reviews: [],
-    returnPolicy: "30 días",
-    minimumOrderQuantity: 1,
-    meta: {},
-    thumbnail: "https://via.placeholder.com/50"
-  },
-  {
-    id: 4,
-    title: "Mesa de Oficina",
-    price: 199.99,
-    description: "Mesa ergonómica para home office",
-    category: "hogar",
-    image: "https://via.placeholder.com/150",
-    rating: { rate: 4.4, count: 45 },
-    brand: "HomeOffice",
-    stock: 10,
-    discountPercentage: 8,
-    tags: ["oficina", "muebles", "trabajo"],
-    sku: "MOF004",
-    weight: 15.0,
-    dimensions: { width: 120, height: 75, depth: 60 },
-    warrantyInformation: "3 años",
-    shippingInformation: "Envío en 5 días",
-    availabilityStatus: "in_stock",
-    reviews: [],
-    returnPolicy: "30 días",
-    minimumOrderQuantity: 1,
-    meta: {},
-    thumbnail: "https://via.placeholder.com/50"
-  },
-  {
-    id: 5,
-    title: "Silla Ejecutiva",
-    price: 299.99,
-    description: "Silla cómoda para largas jornadas",
-    category: "hogar",
-    image: "https://via.placeholder.com/150",
-    rating: { rate: 4.6, count: 78 },
-    brand: "ComfortSeat",
-    stock: 8,
-    discountPercentage: 12,
-    tags: ["silla", "ergonómica", "oficina"],
-    sku: "SEJ005",
-    weight: 12.5,
-    dimensions: { width: 60, height: 110, depth: 65 },
-    warrantyInformation: "5 años",
-    shippingInformation: "Envío en 3 días",
-    availabilityStatus: "in_stock",
-    reviews: [],
-    returnPolicy: "30 días",
-    minimumOrderQuantity: 1,
-    meta: {},
-    thumbnail: "https://via.placeholder.com/50"
+// CONFIGURACIÓN DE BASE DE DATOS PARA RAILWAY
+const getDatabasePath = () => {
+  // En Railway, usa /tmp para permisos de escritura
+  if (process.env.NODE_ENV === 'production') {
+    return '/tmp/bazar.db';
+  } else {
+    const dbDir = './database';
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    return path.join(dbDir, 'bazar.db');
   }
-];
+};
 
-let sales = [];
+// INICIALIZAR BASE DE DATOS
+const initDatabase = () => {
+  try {
+    const dbPath = getDatabasePath();
+    console.log(`📦 Ruta de base de datos: ${dbPath}`);
+    
+    const db = new Database(dbPath);
+    console.log('✅ Conectado a la base de datos SQLite');
 
-// Pasar datos a las rutas
-app.set('products', products);
-app.set('sales', sales);
+    // Crear tablas
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL,
+        price REAL NOT NULL,
+        description TEXT,
+        category TEXT,
+        image TEXT,
+        rating_rate REAL,
+        rating_count INTEGER,
+        brand TEXT,
+        stock INTEGER,
+        discount_percentage REAL,
+        tags TEXT,
+        sku TEXT,
+        weight REAL,
+        dimensions TEXT,
+        warranty_information TEXT,
+        shipping_information TEXT,
+        availability_status TEXT,
+        reviews TEXT,
+        return_policy TEXT,
+        minimum_order_quantity INTEGER,
+        meta TEXT,
+        thumbnail TEXT
+      )
+    `);
+    console.log('✅ Tabla products lista');
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        product_title TEXT,
+        quantity INTEGER DEFAULT 1,
+        total_price REAL,
+        sale_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products (id)
+      )
+    `);
+    console.log('✅ Tabla sales lista');
+
+    // Verificar si hay productos
+    const row = db.prepare("SELECT COUNT(*) as count FROM products").get();
+    
+    if (!row || row.count === 0) {
+      console.log('🔄 Cargando productos desde JSON...');
+      cargarProductosDesdeJSON(db);
+    } else {
+      console.log(`📊 Base de datos lista con ${row.count} productos`);
+    }
+
+    return db;
+  } catch (error) {
+    console.error('❌ Error inicializando base de datos:', error);
+    throw error;
+  }
+};
+
+// CARGAR PRODUCTOS DESDE JSON
+const cargarProductosDesdeJSON = (db) => {
+  try {
+    const productsPath = path.join(__dirname, 'data', 'products.json');
+    
+    if (!fs.existsSync(productsPath)) {
+      console.log('❌ Archivo products.json no encontrado');
+      return;
+    }
+
+    const rawData = fs.readFileSync(productsPath, 'utf8');
+    const data = JSON.parse(rawData);
+    const productsData = data.products || data;
+    
+    console.log(`📥 Encontrados ${productsData.length} productos en JSON`);
+
+    const stmt = db.prepare(`INSERT INTO products 
+      (id, title, price, description, category, image, rating_rate, rating_count, 
+       brand, stock, discount_percentage, tags, sku, weight, dimensions,
+       warranty_information, shipping_information, availability_status, reviews,
+       return_policy, minimum_order_quantity, meta, thumbnail) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    
+    let loadedCount = 0;
+    let errors = 0;
+
+    productsData.forEach(product => {
+      try {
+        const imageUrl = product.image || product.images?.[0] || product.thumbnail || '';
+        const ratingCount = product.rating_count || product.reviews?.length || 0;
+        const tags = product.tags ? JSON.stringify(product.tags) : '[]';
+        const dimensions = product.dimensions ? JSON.stringify(product.dimensions) : '{}';
+        const reviews = product.reviews ? JSON.stringify(product.reviews) : '[]';
+        const meta = product.meta ? JSON.stringify(product.meta) : '{}';
+        
+        stmt.run([
+          product.id,
+          product.title,
+          product.price,
+          product.description,
+          product.category,
+          imageUrl,
+          product.rating || 0,
+          ratingCount,
+          product.brand || '',
+          product.stock || 0,
+          product.discountPercentage || product.discount_percentage || 0,
+          tags,
+          product.sku || '',
+          product.weight || 0,
+          dimensions,
+          product.warrantyInformation || product.warranty_information || '',
+          product.shippingInformation || product.shipping_information || '',
+          product.availabilityStatus || product.availability_status || '',
+          reviews,
+          product.returnPolicy || product.return_policy || '',
+          product.minimumOrderQuantity || product.minimum_order_quantity || 1,
+          meta,
+          product.thumbnail || ''
+        ]);
+        loadedCount++;
+      } catch (error) {
+        if (!error.message.includes('UNIQUE')) {
+          console.error(`❌ Error insertando producto ${product.id}:`, error.message);
+        }
+        errors++;
+      }
+    });
+
+    console.log(`✅ ${loadedCount} productos cargados en BD, ${errors} errores`);
+    
+  } catch (error) {
+    console.error('❌ Error cargando JSON:', error);
+  }
+};
+
+// Inicializar base de datos
+let db;
+try {
+  db = initDatabase();
+  app.set('db', db);
+  console.log('🎉 Base de datos inicializada correctamente');
+} catch (error) {
+  console.error('💥 Error crítico con la base de datos:', error);
+  process.exit(1);
+}
+
+// Middleware para inyectar db en las rutas
+app.use((req, res, next) => {
+  req.db = db;
+  next();
+});
 
 app.use('/api/items', itemsRoutes);
 app.use('/api', salesRoutes);
 
+// Ruta de debug
+app.get('/api/debug/db', (req, res) => {
+  try {
+    const count = req.db.prepare("SELECT COUNT(*) as count FROM products").get();
+    const sample = req.db.prepare("SELECT id, title, category FROM products LIMIT 5").all();
+    
+    res.json({
+      database_status: 'connected',
+      total_products: count.count,
+      sample_products: sample,
+      database_path: getDatabasePath()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api', (req, res) => {
-  res.json({ 
-    message: 'API del Bazar Universal funcionando',
-    timestamp: new Date().toISOString(),
-    status: 'active',
-    products_count: products.length,
-    sales_count: sales.length
-  });
+  try {
+    const count = req.db.prepare("SELECT COUNT(*) as count FROM products").get();
+    res.json({ 
+      message: 'API del Bazar Universal funcionando',
+      timestamp: new Date().toISOString(),
+      status: 'active',
+      products_count: count.count,
+      database: 'SQLite'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', server: 'running' });
+  try {
+    const count = req.db.prepare("SELECT COUNT(*) as count FROM products").get();
+    res.json({ 
+      status: 'OK', 
+      server: 'running',
+      database: 'connected',
+      products_count: count.count
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'ERROR', 
+      error: error.message 
+    });
+  }
 });
 
 app.use((err, req, res, next) => {
@@ -176,5 +258,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
   console.log(`📦 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📊 ${products.length} productos cargados en memoria`);
+  console.log(`🗄️ Base de datos: SQLite`);
 });
