@@ -22,23 +22,17 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // RUTA PARA BASE DE DATOS QUE FUNCIONE EN PRODUCCIÓN
+// RUTA PARA BASE DE DATOS QUE FUNCIONE EN PRODUCCIÓN
 const getDatabasePath = () => {
-  // En producción (Railway) usa /tmp, en desarrollo usa ./database
-  if (process.env.NODE_ENV === 'production') {
-    // Crear directorio /tmp si no existe
-    const tmpDir = '/tmp';
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-    return path.join(tmpDir, 'bazar.db');
-  } else {
-    // En desarrollo, usa la carpeta database local
-    const dbDir = './database';
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    return path.join(dbDir, 'bazar.db');
+  // SIEMPRE usa el mismo archivo, sin importar el entorno
+  const dbDir = './database';
+  
+  // Crear directorio si no existe
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
   }
+  
+  return path.join(dbDir, 'bazar.db');
 };
 
 const initDatabase = () => {
