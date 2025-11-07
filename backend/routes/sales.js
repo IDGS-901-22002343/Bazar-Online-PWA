@@ -1,10 +1,5 @@
 const express = require('express');
-const Database = require('better-sqlite3');
-const path = require('path');
 const router = express.Router();
-
-const dbPath = path.join(__dirname, '../database/bazar.db');
-const db = new Database(dbPath);
 
 router.post('/addSale', (req, res) => {
   try {
@@ -17,13 +12,20 @@ router.post('/addSale', (req, res) => {
       });
     }
     
-    const sql = `INSERT INTO sales (product_id, product_title, quantity, total_price) VALUES (?, ?, ?, ?)`;
-    const stmt = db.prepare(sql);
-    const result = stmt.run(product_id, product_title, quantity, total_price);
+    const sale = {
+      id: req.app.get('sales').length + 1,
+      product_id,
+      product_title,
+      quantity,
+      total_price,
+      sale_date: new Date().toISOString()
+    };
+    
+    req.app.get('sales').push(sale);
     
     res.json({ 
       success: true, 
-      sale_id: result.lastInsertRowid 
+      sale_id: sale.id 
     });
     
   } catch (error) {
@@ -34,9 +36,8 @@ router.post('/addSale', (req, res) => {
 
 router.get('/sales', (req, res) => {
   try {
-    const sql = `SELECT * FROM sales ORDER BY sale_date DESC`;
-    const rows = db.prepare(sql).all();
-    res.json(rows);
+    const sales = req.app.get('sales');
+    res.json(sales);
   } catch (error) {
     console.error('Error obteniendo ventas:', error);
     res.status(500).json({ error: 'Error interno' });
