@@ -6,45 +6,23 @@ router.get('/', (req, res) => {
     const searchQuery = req.query.q || '';
     const db = req.db;
     
-    console.log(`🔍 Búsqueda: "${searchQuery}"`);
+    console.log(`🔍 Búsqueda solicitada: "${searchQuery}"`);
     
-    if (!searchQuery.trim()) {
-      db.all('SELECT * FROM products LIMIT 50', [], (err, products) => {
-        if (err) {
-          console.error('❌ Error obteniendo productos:', err);
-          return res.status(500).json({ error: 'Error interno' });
-        }
-        
-        res.json({ 
-          items: products.map(formatProduct),
-          total: products.length 
-        });
-      });
-      return;
-    }
+    const results = db.searchProducts(searchQuery);
     
-    const sql = `SELECT * FROM products 
-                WHERE title LIKE ? OR description LIKE ? OR category LIKE ? OR brand LIKE ? 
-                LIMIT 50`;
-    const searchPattern = `%${searchQuery}%`;
+    console.log(`✅ Encontrados ${results.length} productos para "${searchQuery}"`);
     
-    db.all(sql, [searchPattern, searchPattern, searchPattern, searchPattern], (err, rows) => {
-      if (err) {
-        console.error('❌ Error en búsqueda:', err);
-        return res.status(500).json({ error: 'Error interno' });
-      }
-      
-      console.log(`✅ Encontrados ${rows.length} productos para "${searchQuery}"`);
-      
-      res.json({
-        items: rows.map(formatProduct),
-        total: rows.length
-      });
+    res.json({
+      items: results,
+      total: results.length
     });
     
   } catch (error) {
     console.error('❌ Error en búsqueda:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message 
+    });
   }
 });
 
@@ -53,54 +31,24 @@ router.get('/:id', (req, res) => {
     const productId = parseInt(req.params.id);
     const db = req.db;
     
-    db.get('SELECT * FROM products WHERE id = ?', [productId], (err, product) => {
-      if (err) {
-        console.error('❌ Error obteniendo producto:', err);
-        return res.status(500).json({ error: 'Error interno' });
-      }
-      
-      if (!product) {
-        return res.status(404).json({ error: 'Producto no encontrado' });
-      }
-      
-      res.json(formatProduct(product));
-    });
+    const product = db.getProductById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ 
+        error: 'Producto no encontrado',
+        productId: productId
+      });
+    }
+    
+    res.json(product);
     
   } catch (error) {
     console.error('❌ Error obteniendo producto:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message 
+    });
   }
 });
-
-// Función para formatear producto
-function formatProduct(product) {
-  return {
-    id: product.id,
-    title: product.title,
-    price: product.price,
-    description: product.description,
-    category: product.category,
-    image: product.image,
-    rating: {
-      rate: product.rating_rate,
-      count: product.rating_count
-    },
-    brand: product.brand,
-    stock: product.stock,
-    discountPercentage: product.discount_percentage,
-    tags: JSON.parse(product.tags || '[]'),
-    sku: product.sku,
-    weight: product.weight,
-    dimensions: JSON.parse(product.dimensions || '{}'),
-    warrantyInformation: product.warranty_information,
-    shippingInformation: product.shipping_information,
-    availabilityStatus: product.availability_status,
-    reviews: JSON.parse(product.reviews || '[]'),
-    returnPolicy: product.return_policy,
-    minimumOrderQuantity: product.minimum_order_quantity,
-    meta: JSON.parse(product.meta || '{}'),
-    thumbnail: product.thumbnail
-  };
-}
 
 module.exports = router;
