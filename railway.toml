@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd frontend && npm install && npm run build"
+buildCommand = "npm run install:all && npm run build"
 
 [deploy]
-startCommand = "node backend/server.js"
+startCommand = "npm start"
 
 [build.args]
 NODE_VERSION = "18"
