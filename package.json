@@ -1,12 +1,10 @@
 {
   "name": "bazar-universal",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "build": "cd frontend && yarn build",
+    "build": "cd frontend && npm run build",
     "start": "node backend/server.js",
-    "dev": "cd backend && yarn dev",
-    "install:all": "cd backend && yarn install && cd ../frontend && yarn install"
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
   },
   "engines": {
     "node": ">=18.0.0"

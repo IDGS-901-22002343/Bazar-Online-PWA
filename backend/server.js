@@ -5,39 +5,53 @@ const sqlite3 = require('sqlite3').verbose();
 const itemsRoutes = require('./routes/items');
 const salesRoutes = require('./routes/sales');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS para producción
 app.use(cors({
-  origin: true, // Permite todos los orígenes en producción
+  origin: true,
   credentials: true
 }));
 
 app.use(bodyParser.json());
 
-// SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND - CORREGIDO
+// SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// API Routes
-app.use('/api/items', itemsRoutes);
-app.use('/api', salesRoutes);
-
-app.get('/api', (req, res) => {
-  res.json({ 
-    message: 'API del Bazar Universal funcionando',
-    timestamp: new Date().toISOString(),
-    status: 'active'
-  });
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', server: 'running' });
-});
+// RUTA PARA BASE DE DATOS QUE FUNCIONE EN PRODUCCIÓN
+const getDatabasePath = () => {
+  // En producción (Railway) usa /tmp, en desarrollo usa ./database
+  if (process.env.NODE_ENV === 'production') {
+    // Crear directorio /tmp si no existe
+    const tmpDir = '/tmp';
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    return path.join(tmpDir, 'bazar.db');
+  } else {
+    // En desarrollo, usa la carpeta database local
+    const dbDir = './database';
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    return path.join(dbDir, 'bazar.db');
+  }
+};
 
 const initDatabase = () => {
-  const db = new sqlite3.Database('./database/bazar.db');
+  const dbPath = getDatabasePath();
+  console.log(`📦 Ruta de base de datos: ${dbPath}`);
+  
+  const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('❌ Error abriendo base de datos:', err.message);
+      return;
+    }
+    console.log('✅ Conectado a la base de datos SQLite');
+  });
   
   db.serialize(() => {
     // Tabla de productos COMPLETA
@@ -67,10 +81,10 @@ const initDatabase = () => {
       thumbnail TEXT
     )`, (err) => {
       if (err) {
-        console.error('Error creando tabla products:', err);
+        console.error('❌ Error creando tabla products:', err);
         return;
       }
-      console.log('Tabla products creada');
+      console.log('✅ Tabla products lista');
     });
     
     // Tabla de ventas
@@ -84,22 +98,22 @@ const initDatabase = () => {
       FOREIGN KEY (product_id) REFERENCES products (id)
     )`, (err) => {
       if (err) {
-        console.error('Error creando tabla sales:', err);
+        console.error('❌ Error creando tabla sales:', err);
         return;
       }
-      console.log('Tabla sales creada');
+      console.log('✅ Tabla sales lista');
     });
     
     // Verificar y cargar productos
     db.get("SELECT COUNT(*) as count FROM products", (err, row) => {
       if (err) {
-        console.error('Error contando productos:', err);
+        console.error('❌ Error contando productos:', err);
         db.close();
         return;
       }
       
-      if (row.count === 0) {
-        console.log('Cargando productos desde JSON...');
+      if (!row || row.count === 0) {
+        console.log('🔄 Cargando productos desde JSON...');
         
         try {
           const productsData = require('./data/products.json').products;
@@ -146,7 +160,7 @@ const initDatabase = () => {
               product.thumbnail || ''
             ], (err) => {
               if (err && !err.message.includes('UNIQUE')) {
-                console.error('Error insertando:', product.title, err.message);
+                console.error('❌ Error insertando:', product.title, err.message);
               } else {
                 loadedCount++;
               }
@@ -154,30 +168,46 @@ const initDatabase = () => {
           });
           
           stmt.finalize(() => {
-            console.log(`Productos cargados: ${loadedCount}`);
+            console.log(`✅ ${loadedCount} productos cargados en BD`);
             db.close();
           });
           
         } catch (error) {
-          console.error('Error cargando JSON:', error);
+          console.error('❌ Error cargando JSON:', error);
           db.close();
         }
         
       } else {
-        console.log(`Base de datos lista con ${row.count} productos`);
+        console.log(`📊 Base de datos lista con ${row.count} productos`);
         db.close();
       }
     });
   });
 };
 
+// API Routes
+app.use('/api/items', itemsRoutes);
+app.use('/api', salesRoutes);
+
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'API del Bazar Universal funcionando',
+    timestamp: new Date().toISOString(),
+    status: 'active'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', server: 'running' });
+});
+
 app.use((err, req, res, next) => {
-  console.error('Error del servidor:', err);
+  console.error('❌ Error del servidor:', err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-// RUTA CATCH-ALL PARA SPA - DEBE IR AL FINAL
-app.get('*', (req, res) => {
+// RUTA CATCH-ALL PARA SPA
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
