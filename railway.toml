@@ -1,9 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm run install:all && npm run build"
+builderSettings = { nodeVersion = "22.12.0" }
 
 [deploy]
-startCommand = "npm start"
-
-[build.args]
-NODE_VERSION = "18"
+startCommand = "cd backend && npm start"
