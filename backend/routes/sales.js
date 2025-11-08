@@ -28,7 +28,7 @@ router.post('/addSale', (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error registrando venta:', error);
+    console.error('Error registrando venta:', error);
     res.json({ success: false, error: error.message });
   }
 });
@@ -39,7 +39,7 @@ router.get('/sales', (req, res) => {
     const sales = db.getAllSales();
     res.json(sales);
   } catch (error) {
-    console.error('❌ Error obteniendo ventas:', error);
+    console.error('Error obteniendo ventas:', error);
     res.status(500).json({ error: 'Error interno' });
   }
 });

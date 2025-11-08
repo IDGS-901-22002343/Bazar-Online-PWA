@@ -17,13 +17,12 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// BASE DE DATOS EN MEMORIA CON TODOS LOS PRODUCTOS REALES
 class MemoryDatabase {
   constructor() {
     this.products = this.loadProducts();
     this.sales = [];
-    console.log(`📊 ${this.products.length} productos cargados`);
-    console.log(`💰 ${this.sales.length} ventas registradas`);
+    console.log(`${this.products.length} productos cargados`);
+    console.log(`${this.sales.length} ventas registradas`);
   }
 
   loadProducts() {
@@ -37,10 +36,10 @@ class MemoryDatabase {
         return products.map(product => this.normalizeProduct(product));
       }
     } catch (error) {
-      console.error('❌ Error cargando productos:', error);
+      console.error('Error cargando productos:', error);
     }
 
-    console.log('⚠️ Usando productos de ejemplo');
+    console.log('Usando productos de ejemplo');
     return this.getSampleProducts();
   }
 
@@ -203,7 +202,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('❌ Error del servidor:', err);
+  console.error('Error del servidor:', err);
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
@@ -212,8 +211,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-  console.log(`📦 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📊 ${db.products.length} productos cargados en memoria`);
-  console.log(`🔍 Ejemplo de búsqueda: http://localhost:${PORT}/api/items?q=mascara`);
+  console.log(`Servidor ejecutándose en puerto ${PORT}`);
+  console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+
 });

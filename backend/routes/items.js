@@ -6,11 +6,11 @@ router.get('/', (req, res) => {
     const searchQuery = req.query.q || '';
     const db = req.db;
     
-    console.log(`🔍 Búsqueda solicitada: "${searchQuery}"`);
+    console.log(`Búsqueda solicitada: "${searchQuery}"`);
     
     const results = db.searchProducts(searchQuery);
     
-    console.log(`✅ Encontrados ${results.length} productos para "${searchQuery}"`);
+    console.log(`Encontrados ${results.length} productos para "${searchQuery}"`);
     
     res.json({
       items: results,
@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Error en búsqueda:', error);
+    console.error('Error en búsqueda:', error);
     res.status(500).json({ 
       error: 'Error interno del servidor',
       details: error.message 
@@ -43,7 +43,7 @@ router.get('/:id', (req, res) => {
     res.json(product);
     
   } catch (error) {
-    console.error('❌ Error obteniendo producto:', error);
+    console.error('Error obteniendo producto:', error);
     res.status(500).json({ 
       error: 'Error interno del servidor',
       details: error.message 

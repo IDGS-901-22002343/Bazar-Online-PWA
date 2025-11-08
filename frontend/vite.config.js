@@ -16,9 +16,9 @@ export default defineConfig({
     ],
 
     manifest: {
-        name: 'Zodiaco Vite React',
-        short_name: 'Zodiaco',
-        description: 'React and Vite app + PWA',
+        name: 'Bazar Online PWA',
+        short_name: 'Bazar Online',
+        description: 'React and Vite app + PWA FullStack Node.js',
         theme_color: '#ffffff',
         display_override: ["fullscreen", "window-controls-overlay", "minimal-ui"],
         display: 'standalone',
